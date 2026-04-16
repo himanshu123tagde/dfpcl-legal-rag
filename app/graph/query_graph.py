@@ -2,8 +2,13 @@ from __future__ import annotations
 
 from app.generation.prompts import LEGAL_RAG_SYSTEM_PROMPT, build_grounded_user_prompt
 from app.models.queries import QueryRequest, QueryResponse
+from app.models.users import UserClaims
+from app.repositories.cosmos_documents_repo import CosmosDocumentsRepository
 from app.repositories.search_chunks_repo import SearchChunksRepository
 from app.retrieval.context_builder import build_context_and_citations
+from app.retrieval.query_analysis import analyze_query
+from app.retrieval.stage1_metadata import run_stage1_metadata
+from app.retrieval.stage2_vector import run_stage2_scoped_hybrid
 from app.services.openai_service import OpenAIService
 
 
@@ -50,4 +55,49 @@ def execute_query_phase4(
         user_prompt=user_prompt,
     )
 
+    return QueryResponse(answer=answer, citations=citations)
+
+
+def execute_query_phase6(
+    *,
+    openai: OpenAIService,
+    search_repo: SearchChunksRepository,
+    cosmos_repo: CosmosDocumentsRepository,
+    user: UserClaims,
+    req: QueryRequest,
+) -> QueryResponse:
+    """
+    Phase 6:
+    - Analyze query to extract keyword/filters
+    - Stage 1: Cosmos metadata + RBAC/classification -> candidate docs (and summaries)
+    - Stage 2: AI Search hybrid search scoped to candidate doc_ids
+    - Build context from chunks + summaries
+    - Generate grounded answer
+    """
+    analysis = analyze_query(req.question)
+
+    stage1 = run_stage1_metadata(cosmos_repo=cosmos_repo, user=user, analysis=analysis, limit=25)
+    stage2 = run_stage2_scoped_hybrid(
+        search_repo=search_repo,
+        openai=openai,
+        analysis=analysis,
+        candidate_doc_ids=stage1.candidate_doc_ids,
+        top_k=req.top_k,
+    )
+
+    if not stage2.chunks:
+        return QueryResponse(answer=_NO_CONTEXT_ANSWER)
+
+    summaries_for_context = [d.model_dump() for d in stage1.candidates]
+    context, citations = build_context_and_citations(
+        stage2.chunks,
+        max_chunks=req.top_k,
+        doc_titles=stage1.doc_titles,
+        doc_summaries=summaries_for_context,
+    )
+    if not context:
+        return QueryResponse(answer=_NO_CONTEXT_ANSWER)
+
+    user_prompt = build_grounded_user_prompt(question=req.question, context=context)
+    answer = openai.generate_answer(system_prompt=LEGAL_RAG_SYSTEM_PROMPT, user_prompt=user_prompt)
     return QueryResponse(answer=answer, citations=citations)

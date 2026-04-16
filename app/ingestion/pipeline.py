@@ -5,6 +5,7 @@ from datetime import datetime
 
 from app.ingestion.chunking import chunk_pdf_pages
 from app.ingestion.extractors.pdf_extractor import extract_pdf_text
+from app.ingestion.metadata_llm import build_naive_summary, extract_keywords
 from app.models.chunks import Chunk
 from app.models.documents import DocumentMetadata
 from app.models.ingestion import IngestionMessage
@@ -45,6 +46,12 @@ class IngestionPipeline:
 
             doc.status = "extracted"
             doc.page_count = extracted.page_count
+
+            # Phase 6: populate lightweight summary + keywords for Stage 1 usefulness
+            head_text = "\n\n".join(p.text for p in extracted.pages[:3])
+            doc.full_summary = build_naive_summary(head_text)
+            doc.keywords = extract_keywords(head_text, max_keywords=12)
+
             doc.updated_at = datetime.utcnow()
             self.cosmos_repo.upsert(doc)
 

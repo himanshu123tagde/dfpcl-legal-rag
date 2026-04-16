@@ -81,6 +81,7 @@ class CosmosDocumentsRepository:
         where.append(
             "("
             "CONTAINS(LOWER(c.title), LOWER(@kw)) "
+            "OR (IS_DEFINED(c.full_summary) AND CONTAINS(LOWER(c.full_summary), LOWER(@kw))) "
             "OR EXISTS(SELECT VALUE k FROM k IN c.keywords WHERE CONTAINS(LOWER(k), LOWER(@kw))) "
             "OR EXISTS(SELECT VALUE p FROM p IN c.parties WHERE CONTAINS(LOWER(p), LOWER(@kw)))"
             ")"

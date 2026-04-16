@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.dependencies import OpenAIServiceDep, RequestIdDep, SearchRepoDep
-from app.graph.query_graph import execute_query_phase4
+from app.dependencies import CosmosRepoDep, CurrentUserDep, OpenAIServiceDep, RequestIdDep, SearchRepoDep
+from app.graph.query_graph import execute_query_phase6
 from app.models.queries import QueryRequest, QueryResponse
 
 router = APIRouter()
@@ -13,11 +13,19 @@ router = APIRouter()
 async def query(
     req: QueryRequest,
     request_id: RequestIdDep,
+    user: CurrentUserDep,
     openai: OpenAIServiceDep,
     search_repo: SearchRepoDep,
+    cosmos_repo: CosmosRepoDep,
 ):
     try:
-        return execute_query_phase4(openai=openai, search_repo=search_repo, req=req)
+        return execute_query_phase6(
+            openai=openai,
+            search_repo=search_repo,
+            cosmos_repo=cosmos_repo,
+            user=user,
+            req=req,
+        )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception:
