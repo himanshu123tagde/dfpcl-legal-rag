@@ -108,6 +108,8 @@ class SearchChunksRepository:
             filter=odata_filter,
             top=top,
             select=["chunk_id", "doc_id", "content", "keywords", "page_number", "chunk_index", "language"],
+            query_type="semantic",
+            semantic_configuration_name="default"
         )
 
         # Convert SearchItemPaged -> list[dict]
