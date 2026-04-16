@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
-from fastapi import Header
+from fastapi import Depends, Header
 
 from app.config import Settings, get_settings
 from app.models.users import UserClaims
@@ -18,14 +18,14 @@ def settings_dep() -> Settings:
     return get_settings()
 
 
-SettingsDep = Annotated[Settings, settings_dep]
+SettingsDep = Annotated[Settings, Depends(settings_dep)]
 
 
 def request_id_dep(x_request_id: str | None = Header(default=None)) -> str:
     return x_request_id or str(uuid.uuid4())
 
 
-RequestIdDep = Annotated[str, request_id_dep]
+RequestIdDep = Annotated[str, Depends(request_id_dep)]
 
 
 def current_user_dep(
@@ -42,7 +42,7 @@ def current_user_dep(
     )
 
 
-CurrentUserDep = Annotated[UserClaims, current_user_dep]
+CurrentUserDep = Annotated[UserClaims, Depends(current_user_dep)]
 
 
 _openai_svc: OpenAIService | None = None
@@ -55,7 +55,7 @@ def openai_service_dep(settings: SettingsDep) -> OpenAIService:
     return _openai_svc
 
 
-OpenAIServiceDep = Annotated[OpenAIService, openai_service_dep]
+OpenAIServiceDep = Annotated[OpenAIService, Depends(openai_service_dep)]
 
 
 _cosmos_repo: CosmosDocumentsRepository | None = None
@@ -68,7 +68,7 @@ def cosmos_repo_dep(settings: SettingsDep) -> CosmosDocumentsRepository:
     return _cosmos_repo
 
 
-CosmosRepoDep = Annotated[CosmosDocumentsRepository, cosmos_repo_dep]
+CosmosRepoDep = Annotated[CosmosDocumentsRepository, Depends(cosmos_repo_dep)]
 
 
 _search_repo: SearchChunksRepository | None = None
@@ -81,7 +81,7 @@ def search_repo_dep(settings: SettingsDep) -> SearchChunksRepository:
     return _search_repo
 
 
-SearchRepoDep = Annotated[SearchChunksRepository, search_repo_dep]
+SearchRepoDep = Annotated[SearchChunksRepository, Depends(search_repo_dep)]
 
 
 _storage_svc: StorageService | None = None
@@ -94,7 +94,7 @@ def storage_service_dep(settings: SettingsDep) -> StorageService:
     return _storage_svc
 
 
-StorageServiceDep = Annotated[StorageService, storage_service_dep]
+StorageServiceDep = Annotated[StorageService, Depends(storage_service_dep)]
 
 
 _bus_svc: BusService | None = None
@@ -107,4 +107,4 @@ def bus_service_dep(settings: SettingsDep) -> BusService:
     return _bus_svc
 
 
-BusServiceDep = Annotated[BusService, bus_service_dep]
+BusServiceDep = Annotated[BusService, Depends(bus_service_dep)]

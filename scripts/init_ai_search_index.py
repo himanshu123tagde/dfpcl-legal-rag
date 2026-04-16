@@ -19,7 +19,7 @@ from azure.search.documents.indexes.models import (
     HnswParameters,
     SemanticConfiguration,
     SemanticSearch,
-    PrioritizedFields,
+    SemanticPrioritizedFields,
     SemanticField,
 )
 
@@ -43,12 +43,13 @@ def main() -> None:
             type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
             searchable=True,
             vector_search_dimensions=3072,
-            vector_search_profile_name="vs-default",
+            vector_search_profile_name="vector-profile",
         ),
 
-        SearchableField(
+        SearchField(
             name="keywords",
             type=SearchFieldDataType.Collection(SearchFieldDataType.String),
+            searchable=True,
             filterable=True,
         ),
 
@@ -60,13 +61,13 @@ def main() -> None:
     vector_search = VectorSearch(
         profiles=[
             VectorSearchProfile(
-                name="vs-default",
-                algorithm_configuration_name="hnsw-cosine",
+                name="vector-profile",
+                algorithm_configuration_name="hnsw-config",
             )
         ],
         algorithms=[
             HnswAlgorithmConfiguration(
-                name="hnsw-cosine",
+                name="hnsw-config",
                 parameters=HnswParameters(
                     metric="cosine",
                     m=4,
@@ -81,7 +82,7 @@ def main() -> None:
         configurations=[
             SemanticConfiguration(
                 name="default",
-                prioritized_fields=PrioritizedFields(
+                prioritized_fields=SemanticPrioritizedFields(
                     content_fields=[SemanticField(field_name="content")],
                     keywords_fields=[SemanticField(field_name="keywords")],
                 ),

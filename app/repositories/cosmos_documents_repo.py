@@ -40,7 +40,7 @@ class CosmosDocumentsRepository:
         )
 
     def upsert(self, doc: DocumentMetadata) -> None:
-        self._container.upsert_item(doc.model_dump())
+        self._container.upsert_item(doc.model_dump(mode="json"))
 
     def get_by_doc_id(self, doc_id: str) -> Optional[DocumentMetadata]:
         try:
