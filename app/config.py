@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     azure_openai_api_version: str = "2024-02-15-preview"
     azure_openai_deployment_gpt: str | None = None
     azure_openai_deployment_embed: str | None = None
+    azure_openai_deployment_mini: str | None = None
 
     # Cosmos DB (used from Phase 2)
     cosmos_endpoint: str | None = None

@@ -20,3 +20,5 @@ class Citation(BaseModel):
 class QueryResponse(BaseModel):
     answer: str
     citations: List[Citation] = Field(default_factory=list)
+    used_hyde: bool = False
+    used_scoped_search: bool = False

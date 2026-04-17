@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 
-from app.dependencies import CosmosRepoDep, CurrentUserDep, OpenAIServiceDep, RequestIdDep, SearchRepoDep
+from app.dependencies import CosmosRepoDep, CurrentUserDep, HydeServiceDep, OpenAIServiceDep, RequestIdDep, SearchRepoDep
 from app.graph.query_graph import execute_query_phase6
 from app.models.queries import QueryRequest, QueryResponse
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("", response_model=QueryResponse)
@@ -17,6 +20,7 @@ async def query(
     openai: OpenAIServiceDep,
     search_repo: SearchRepoDep,
     cosmos_repo: CosmosRepoDep,
+    hyde_service: HydeServiceDep,
 ):
     try:
         return execute_query_phase6(
@@ -25,10 +29,12 @@ async def query(
             cosmos_repo=cosmos_repo,
             user=user,
             req=req,
+            hyde_service=hyde_service,
         )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception:
+        logger.exception("Query failed. request_id=%s", request_id)
         raise HTTPException(status_code=500, detail=f"Query failed. request_id={request_id}")
 
 

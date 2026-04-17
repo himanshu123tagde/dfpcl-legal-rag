@@ -5,7 +5,7 @@ from hashlib import sha256
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 
 from app.dependencies import BusServiceDep, CosmosRepoDep, CurrentUserDep, StorageServiceDep
-from app.models.documents import DocumentMetadata
+from app.models.documents import DocumentMetadata, DocType, Classification
 from app.models.ingestion import IngestionMessage, UploadDocumentResponse
 from app.utils.id_generator import new_doc_id
 from app.utils.text_utils import sanitize_filename, sanitize_path_token
@@ -44,8 +44,8 @@ async def upload_document(
     file: UploadFile = File(...),
     department: str = Form(...),
     team: str = Form(...),
-    classification: str = Form("internal"),
-    doc_type: str = Form("other"),
+    classification: Classification = Form("internal"),
+    doc_type: DocType = Form("other"),
     language: str = Form("en"),
 ):
     _ensure_pdf_upload(file)

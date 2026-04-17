@@ -63,6 +63,7 @@ _STOPWORDS = {
 class QueryAnalysis:
     keyword: str
     optimized_query_text: str
+    needs_hyde: bool = False
     doc_type: str | None = None
     jurisdiction: str | None = None
     language: str | None = None
@@ -83,11 +84,12 @@ def _extract_fields(question: str) -> dict[str, str]:
 
 
 def _detect_doc_type(normalized_question: str) -> str | None:
-    # Keep this intentionally heuristic in Phase 6. Phase 7 can introduce model-assisted analysis.
-    if any(w in normalized_question for w in ["contract", "agreement", "msa", "sow"]):
-        return "contract"
+    # Check for 'judgment' first because legal queries often mention 'contract'
+    # in the context of a judgment (e.g., "judgment regarding breach of contract").
     if any(w in normalized_question for w in ["judgment", "judgement", "order", "decree", "appeal"]):
         return "judgment"
+    if any(w in normalized_question for w in ["contract", "agreement", "msa", "sow"]):
+        return "contract"
     if any(w in normalized_question for w in ["regulation", "rule", "rules", "act", "notification", "circular"]):
         return "regulation"
     if any(w in normalized_question for w in ["email", "mail", "letter", "correspondence"]):
@@ -106,6 +108,73 @@ def _choose_keyword(normalized_question: str) -> str:
     # Prefer the longest token; use first occurrence as tie-breaker.
     best = max(tokens, key=lambda t: (len(t), -tokens.index(t)))
     return best
+
+
+# ---------------------------------------------------------------------------
+# HyDE gating heuristic
+# ---------------------------------------------------------------------------
+_HYDE_TRIGGER_PHRASES = {
+    "what happens if",
+    "what are the",
+    "what is the",
+    "what are our",
+    "how does",
+    "how can",
+    "explain",
+    "summarize",
+    "summarise",
+    "describe",
+    "implications",
+    "consequences",
+    "liabilities",
+    "legal effect",
+    "rights and obligations",
+    "under what circumstances",
+    "what constitutes",
+}
+
+_NAVIGATIONAL_PREFIXES = {
+    "find",
+    "show",
+    "get",
+    "list",
+    "fetch",
+    "retrieve",
+    "lookup",
+    "look up",
+    "pull up",
+    "give me",
+}
+
+
+def _should_use_hyde(normalized_question: str) -> bool:
+    """
+    Decide whether HyDE should fire for this query.
+
+    Trigger when the question is conceptual / analytical:
+    - Contains a known conceptual trigger phrase, OR
+    - Is longer than 6 content words (after stopword removal).
+
+    Skip when the question looks navigational / direct:
+    - Starts with a known navigational verb, OR
+    - Is very short (≤ 4 content words).
+    """
+    # Quick skip: navigational prefixes
+    for prefix in _NAVIGATIONAL_PREFIXES:
+        if normalized_question.startswith(prefix):
+            return False
+
+    # Trigger phrases
+    for phrase in _HYDE_TRIGGER_PHRASES:
+        if phrase in normalized_question:
+            return True
+
+    # Length-based heuristic (content words only)
+    content_words = [
+        w for w in normalized_question.split()
+        if len(w) >= 3 and w not in _STOPWORDS
+    ]
+    return len(content_words) > 6
 
 
 def _normalize_jurisdiction(value: str) -> str:
@@ -145,10 +214,12 @@ def analyze_query(question: str) -> QueryAnalysis:
 
     keyword = _choose_keyword(normalized)
     optimized_query_text = question.strip()
+    needs_hyde = _should_use_hyde(normalized)
 
     return QueryAnalysis(
         keyword=keyword,
         optimized_query_text=optimized_query_text,
+        needs_hyde=needs_hyde,
         doc_type=doc_type,
         jurisdiction=jurisdiction,
         language=language,

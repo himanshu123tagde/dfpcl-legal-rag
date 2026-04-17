@@ -10,6 +10,7 @@ from app.models.users import UserClaims
 from app.repositories.cosmos_documents_repo import CosmosDocumentsRepository
 from app.repositories.search_chunks_repo import SearchChunksRepository
 from app.services.bus_service import BusService
+from app.services.hyde_service import HydeService
 from app.services.openai_service import OpenAIService
 from app.services.storage_service import StorageService
 
@@ -107,4 +108,20 @@ def bus_service_dep(settings: SettingsDep) -> BusService:
     return _bus_svc
 
 
-BusServiceDep = Annotated[BusService, Depends(bus_service_dep)]
+BusServiceDep = Annotated[BusService, Depends(bus_service_dep)]
+
+
+_hyde_svc: HydeService | None = None
+
+
+def hyde_service_dep(
+    openai: OpenAIServiceDep,
+    settings: SettingsDep,
+) -> HydeService:
+    global _hyde_svc
+    if _hyde_svc is None:
+        _hyde_svc = HydeService(openai=openai, settings=settings)
+    return _hyde_svc
+
+
+HydeServiceDep = Annotated[HydeService, Depends(hyde_service_dep)]
